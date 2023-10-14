@@ -2,140 +2,137 @@
 #include <Adafruit_NeoPixel.h>
 
 // Hardware
-#define CAPTOUCH_PIN 0  //capacitive touch pin
-#define NEOPIXEL_PIN 1  //neopixel ring pin
-#define NUM_LEDS    7  //how many pixels total
+#define CAPTOUCH_PIN 0
+#define NEOPIXEL_PIN 1
+#define NUM_LEDS 7
+#define NUM_STYLES 3
+
+long tick = 0;
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_LEDS, NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800);
 
 // set up capacitive touch button using the FreeTouch library
 // Calibrating your capacitive touch sensitivity: Change this variable to something between your capacitive touch serial readouts for on and off
 long oldState = 0;
-int touch = 500;
+int touchThreshold = 400;
+long inputCounter = 0;
 Adafruit_FreeTouch qt_1 = Adafruit_FreeTouch(CAPTOUCH_PIN, OVERSAMPLE_4, RESISTOR_50K, FREQ_MODE_NONE);
 
-/*
-  
-
-  Serial.print(qt_1.measure());
-  Serial.write(' ');
-  checkpress();   //check to see if the button's been pressed
-  delay(20);
-}
-
-void checkpress() {
-
-// Get current button state.
- 
-    long newState =  qt_1.measure();  
-    Serial.println(qt_1.measure());
-   if (newState > touch && oldState < touch) {
-    // Short delay to debounce button.
-    delay(500);
-    // Check if button is still low after debounce.
-    long newState =  qt_1.measure(); }
-*/
-
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(40, NEOPIXEL_PIN);
-
-uint8_t  mode   = 2, // Current animation effect
-         offset = 0;
-uint32_t color  = 0X00A4B3; // Starting color
-uint32_t prevTime; 
 
 void setup() {
   pixels.begin();
-  pixels.setBrightness(40); // 1/3 brightness
+  pixels.setBrightness(30); // 1/3 brightness
 
-if (! qt_1.begin())  
+  if (!qt_1.begin())  
   {
     Serial.println("Failed to begin qt on pin A1");
   }
-
-  prevTime = millis();
 }
 
 void loop() {
-  uint8_t  i;
-  uint32_t t;
+  getInput();
+  makeLight();
+  delay(200);
+  tick++;
+}
 
-  Serial.println(qt_1.measure());
+void getInput()
+{
+  long newState =  qt_1.measure();  
+  if (newState > touchThreshold && oldState < touchThreshold)
+  {
+    delay(100);
+    // Check if button is still low after debounce.
+    newState = qt_1.measure();
+    if (newState > touchThreshold)
+    {
+      inputCounter++;
+    }
+  }
+  oldState = newState;
+  //Serial.printf("%d, %d \n", newState, inputCounter);
+}
 
-  switch(mode) {
-    
-   case 0: //rainbow hold
-    rainbowHold(20);
-    delay(500);
+void makeLight()
+{
+  int style = inputCounter % NUM_STYLES;
+  int i = 0;
+  uint32_t color = 0x000000;
+  uint16_t hue;
+  uint16_t hueDelta;
+  uint8_t saturation;
+  uint8_t light;
+  uint8_t lightDelta;
+/*
+  switch (style)
+  {
+    case 0:
+    hue = 0;
+    saturation = 255;
+    light = 255;
+    hueDelta = 127;
+    lightDelta = -10;
     break;
     
-   case 1: //rainbow cycle slow
-    rainbowCycleslow(20);
-    delay(50);
+    case 1:
+    hue = 24845;
+    saturation = 255;
+    light = 255;
+    hueDelta = 2040;
+    lightDelta = -5;
     break;
        
-   case 2: //rainbow cycle fast 
-    rainbowCycle(5);
-    delay(50);
+    case 2:
+    hue = 43690;
+    saturation = 60;
+    light = 140;
+    hueDelta = 1024;
+    lightDelta = 3;
     break;
   }
 
-  t = millis();
-  if((t - prevTime) > 8000) {      // Every 8 seconds...
-    mode++;                        // Next mode
-    if(mode > 3) {                 // End of modes?
-      mode = 0;                    // Start modes over
-      color >>= 8;                 // Next color R->G->B
-      if(!color) color = 0xB300A4; // Reset color
-    }
-    for(i=0; i<32; i++) pixels.setPixelColor(i, 0);
-    prevTime = t;
-    
+  //Serial.printf("%d, %d, %d \n", style, hue, tick);
+  for (i=0; i < NUM_LEDS; i++)
+  {
+    int deltaOffset = (i + tick) % NUM_LEDS;
+    color = pixels.ColorHSV(hue + hueDelta * deltaOffset, saturation, light + lightDelta * deltaOffset);
+    pixels.setPixelColor(i, color);
+    Serial.printf("%d, %d, %d, %d, %d \n", style, hue, i, color, tick);
   }
-
-  
-}
-void rainbow(uint8_t wait) {
-  uint16_t i, j;
-
-  for(j=0; j<256; j++) {
-    for(i=0; i<pixels.numPixels(); i++) {
-      pixels.setPixelColor(i, Wheel((i+j) & 255));
-    }
-    pixels.show();
-    delay(wait);
+  */
+  switch (style)
+  {
+    case 0:
+      for (i=0; i < NUM_LEDS; i++)
+      {
+        color = pixels.ColorHSV(i*8000, 255, 255);
+        //color = pixels.Color(i*32, 0, 0);
+        pixels.setPixelColor(i, color);
+        //pixels.setPixelColor(i, 255, 0, 0);
+        Serial.printf("%d, %d, %d \n", style, i, color);
+      }    
+    break;
+    case 1:
+      for (i=0; i < NUM_LEDS; i++)
+      {
+        color = pixels.ColorHSV(255, i*40, 255);
+        //color = pixels.Color(0, i*32, 0);
+        pixels.setPixelColor(i, color);
+        //pixels.setPixelColor(i, 0, 255, 0);
+        Serial.printf("%d, %d, %d \n", style, i, color);
+      }    
+    break;
+    case 2:
+      for (i=0; i < NUM_LEDS; i++)
+      {
+        color = pixels.ColorHSV(255, 255, i*40);
+        //color = pixels.Color(0, 0, i*32);
+        pixels.setPixelColor(i, color);
+        //pixels.setPixelColor(i, 0, 0, 255);
+        Serial.printf("%d, %d, %d \n", style, i, color);
+      }    
+    break;
   }
-}
-
-void rainbowCycle(uint8_t wait) {
-  uint16_t r, j;
-
-  for(j=0; j<256*6; j++) { // 6 cycles of all colors on wheel
-    for(r=0; r< pixels.numPixels(); r++) {
-      pixels.setPixelColor(r, Wheel(((r * 256 / pixels.numPixels()) + j) & 255));
-    }
-    pixels.show();
-    delay(wait);
-  }
-}
-void rainbowCycleslow(uint8_t wait) {
-  uint16_t r, j;
-
-  for(j=0; j<256*3; j++) { // 3 cycles of all colors on wheel
-    for(r=0; r< pixels.numPixels(); r++) {
-      pixels.setPixelColor(r, Wheel(((r * 256 / pixels.numPixels()) + j) & 255));
-    }
-    pixels.show();
-    delay(wait);
-  }
-}
-void rainbowHold(uint8_t wait) {
-  uint16_t r, j;
-
-  for(j=0; j<256*1; j++) { // 3 cycles of all colors on wheel
-    for(r=0; r< pixels.numPixels(); r++) {
-      pixels.setPixelColor(r, Wheel(((r * 256 / pixels.numPixels()) + j) & 255));
-    }
-    pixels.show();
-    delay(wait);
-  }
+  pixels.show();
 }
 
 // Input a value 0 to 255 to get a color value.
