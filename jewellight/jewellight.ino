@@ -5,7 +5,7 @@
 #define CAPTOUCH_PIN 0
 #define NEOPIXEL_PIN 1
 #define NUM_LEDS 7
-#define NUM_STYLES 3
+#define NUM_STYLES 2
 
 long tick = 0;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_LEDS, NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800);
@@ -17,6 +17,17 @@ int touchThreshold = 400;
 long inputCounter = 0;
 Adafruit_FreeTouch qt_1 = Adafruit_FreeTouch(CAPTOUCH_PIN, OVERSAMPLE_4, RESISTOR_50K, FREQ_MODE_NONE);
 
+struct Mode {
+  uint8_t ledGroup[NUM_LEDS]; // assignement of each led to one of 3 groups
+  uint32_t pattern[3]; // assume there are 3 groups
+  // byte patternLength; for now hardcoded
+  uint8_t timeFactor;
+};
+
+Mode modes[2] = {
+  {{0, 1, 1, 1, 2, 2, 2}, {0xff6688, 0xff4400, 0xff2200}, 5},
+  {{0, 1, 2, 1, 2, 1, 2}, {0xbb0088, 0x22cc77, 0x2277cc}, 10}
+};
 
 void setup() {
   pixels.begin();
@@ -55,97 +66,20 @@ void getInput()
 void makeLight()
 {
   int style = inputCounter % NUM_STYLES;
-  int i = 0;
-  uint32_t color = 0x000000;
-  uint16_t hue;
-  uint16_t hueDelta;
-  uint8_t saturation;
-  uint8_t light;
-  uint8_t lightDelta;
-/*
-  switch (style)
-  {
-    case 0:
-    hue = 0;
-    saturation = 255;
-    light = 255;
-    hueDelta = 127;
-    lightDelta = -10;
-    break;
-    
-    case 1:
-    hue = 24845;
-    saturation = 255;
-    light = 255;
-    hueDelta = 2040;
-    lightDelta = -5;
-    break;
-       
-    case 2:
-    hue = 43690;
-    saturation = 60;
-    light = 140;
-    hueDelta = 1024;
-    lightDelta = 3;
-    break;
-  }
-
+  Mode mode = modes[style];
   //Serial.printf("%d, %d, %d \n", style, hue, tick);
+
+  int i = 0;
   for (i=0; i < NUM_LEDS; i++)
   {
-    int deltaOffset = (i + tick) % NUM_LEDS;
-    color = pixels.ColorHSV(hue + hueDelta * deltaOffset, saturation, light + lightDelta * deltaOffset);
+    uint8_t group = mode.ledGroup[i];
+    uint32_t color = mode.pattern[group];
+    //int groint deltaOffset = (i + tick) % NUM_LEDS;
+    //color = pixels.ColorHSV(hue + hueDelta * deltaOffset, saturation, light + lightDelta * deltaOffset);
     pixels.setPixelColor(i, color);
-    Serial.printf("%d, %d, %d, %d, %d \n", style, hue, i, color, tick);
-  }
-  */
-  switch (style)
-  {
-    case 0:
-      for (i=0; i < NUM_LEDS; i++)
-      {
-        color = pixels.ColorHSV(i*8000, 255, 255);
-        //color = pixels.Color(i*32, 0, 0);
-        pixels.setPixelColor(i, color);
-        //pixels.setPixelColor(i, 255, 0, 0);
-        Serial.printf("%d, %d, %d \n", style, i, color);
-      }    
-    break;
-    case 1:
-      for (i=0; i < NUM_LEDS; i++)
-      {
-        color = pixels.ColorHSV(255, i*40, 255);
-        //color = pixels.Color(0, i*32, 0);
-        pixels.setPixelColor(i, color);
-        //pixels.setPixelColor(i, 0, 255, 0);
-        Serial.printf("%d, %d, %d \n", style, i, color);
-      }    
-    break;
-    case 2:
-      for (i=0; i < NUM_LEDS; i++)
-      {
-        color = pixels.ColorHSV(255, 255, i*40);
-        //color = pixels.Color(0, 0, i*32);
-        pixels.setPixelColor(i, color);
-        //pixels.setPixelColor(i, 0, 0, 255);
-        Serial.printf("%d, %d, %d \n", style, i, color);
-      }    
-    break;
+    //Serial.printf("%d, %d, %d, %d, %d \n", style, hue, i, color, tick);
   }
   pixels.show();
 }
 
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
-  if(WheelPos < 85) {
-   return pixels.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if(WheelPos < 170) {
-   WheelPos -= 85;
-   return pixels.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170;
-   return pixels.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-}
 
