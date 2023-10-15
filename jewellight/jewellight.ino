@@ -5,7 +5,8 @@
 #define CAPTOUCH_PIN 0
 #define NEOPIXEL_PIN 1
 #define NUM_LEDS 7
-#define NUM_STYLES 2
+#define NUM_MODES 3
+#define NUM_PATTERNS 8
 
 long tick = 0;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_LEDS, NEOPIXEL_PIN, NEO_GRBW + NEO_KHZ800);
@@ -19,14 +20,42 @@ Adafruit_FreeTouch qt_1 = Adafruit_FreeTouch(CAPTOUCH_PIN, OVERSAMPLE_4, RESISTO
 
 struct Mode {
   uint8_t ledGroup[NUM_LEDS]; // assignement of each led to one of 3 groups
-  uint32_t pattern[3]; // assume there are 3 groups
+  uint32_t pattern[NUM_PATTERNS][3]; // assume there are 3 groups and 4 states
   // byte patternLength; for now hardcoded
   uint8_t timeFactor;
 };
 
-Mode modes[2] = {
-  {{0, 1, 1, 1, 2, 2, 2}, {0xff6688, 0xff4400, 0xff2200}, 5},
-  {{0, 1, 2, 1, 2, 1, 2}, {0xbb0088, 0x22cc77, 0x2277cc}, 10}
+Mode modes[NUM_MODES] = {
+  {{0, 1, 1, 1, 2, 2, 2}, { // Fire fighter
+    {0xff5511, 0xff2200, 0x000000}, 
+    {0xff5511, 0x000000, 0x000000}, 
+    {0xff5511, 0xff2200, 0x000000}, 
+    {0xff5511, 0x000000, 0x000000},
+    {0xff5511, 0x000000, 0xff2200}, 
+    {0xff5511, 0x000000, 0x000000}, 
+    {0xff5511, 0x000000, 0xff2200}, 
+    {0xff5511, 0x000000, 0x000000}
+    }, 1},
+  {{0, 1, 2, 1, 2, 1, 2}, { // Alternating red
+    {0xff5511, 0xff0000, 0x000000}, 
+    {0xff5511, 0x000000, 0xff0000}, 
+    {0x000000, 0xff0000, 0x000000}, 
+    {0x000000, 0x000000, 0xff0000},
+    {0xff5511, 0xff0000, 0x000000},
+    {0xff5511, 0x000000, 0xff0000},
+    {0x000000, 0xff0000, 0x000000},
+    {0x000000, 0x000000, 0xff0000},
+    }, 3},
+  {{0, 0, 1, 1, 0, 2, 2}, { // Police car
+    {0x2222ff, 0xff0000, 0x000000}, 
+    {0xff2222, 0x000000, 0x0000ff}, 
+    {0x2222ff, 0xff0000, 0x000000}, 
+    {0xff2222, 0x000000, 0x0000ff},
+    {0x0000ff, 0xff0000, 0x000000}, 
+    {0xff0000, 0x000000, 0x0000ff}, 
+    {0x0000ff, 0xff0000, 0x000000}, 
+    {0xff0000, 0x000000, 0x0000ff}
+    }, 1}
 };
 
 void setup() {
@@ -42,16 +71,16 @@ void setup() {
 void loop() {
   getInput();
   makeLight();
-  delay(200);
+  delay(70);
   tick++;
 }
 
 void getInput()
 {
-  long newState =  qt_1.measure();  
+  long newState = qt_1.measure();  
   if (newState > touchThreshold && oldState < touchThreshold)
   {
-    delay(100);
+    delay(20);
     // Check if button is still low after debounce.
     newState = qt_1.measure();
     if (newState > touchThreshold)
@@ -65,7 +94,7 @@ void getInput()
 
 void makeLight()
 {
-  int style = inputCounter % NUM_STYLES;
+  int style = inputCounter % NUM_MODES;
   Mode mode = modes[style];
   //Serial.printf("%d, %d, %d \n", style, hue, tick);
 
@@ -73,7 +102,7 @@ void makeLight()
   for (i=0; i < NUM_LEDS; i++)
   {
     uint8_t group = mode.ledGroup[i];
-    uint32_t color = mode.pattern[group];
+    uint32_t color = mode.pattern[(tick/mode.timeFactor) % NUM_PATTERNS][group];
     //int groint deltaOffset = (i + tick) % NUM_LEDS;
     //color = pixels.ColorHSV(hue + hueDelta * deltaOffset, saturation, light + lightDelta * deltaOffset);
     pixels.setPixelColor(i, color);
